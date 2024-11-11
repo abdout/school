@@ -2,11 +2,12 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import prisma from "@/lib/prisma";
+import { UserRole } from "@prisma/client"; // Import UserRole directly from Prisma
+import { db } from "@/lib/db"; // Changed import to use db
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Class, Event, Prisma } from "@prisma/client";
 import Image from "next/image";
-import { auth } from "@clerk/nextjs/server";
+import { currentRole, currentUser } from "@/lib/auth"; // Import currentRole and currentUser
 
 type EventList = Event & { class: Class };
 
@@ -15,10 +16,11 @@ const EventListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
+  const user = await currentUser();
+  const role = await currentRole();
+  const currentUserId = user?.id;
 
-  const { userId, sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  const currentUserId = userId;
+  const isAdmin = role === UserRole.ADMIN;
 
   const columns = [
     {
@@ -44,7 +46,7 @@ const EventListPage = async ({
       accessor: "endTime",
       className: "hidden md:table-cell",
     },
-    ...(role === "admin"
+    ...(isAdmin
       ? [
           {
             header: "Actions",
@@ -80,7 +82,7 @@ const EventListPage = async ({
       </td>
       <td>
         <div className="flex items-center gap-2">
-          {role === "admin" && (
+          {isAdmin && (
             <>
               <FormContainer table="event" type="update" data={item} />
               <FormContainer table="event" type="delete" id={item.id} />
@@ -92,11 +94,9 @@ const EventListPage = async ({
   );
 
   const { page, ...queryParams } = searchParams;
-
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.EventWhereInput = {};
 
   if (queryParams) {
@@ -114,7 +114,6 @@ const EventListPage = async ({
   }
 
   // ROLE CONDITIONS
-
   const roleConditions = {
     teacher: { lessons: { some: { teacherId: currentUserId! } } },
     student: { students: { some: { id: currentUserId! } } },
@@ -124,12 +123,12 @@ const EventListPage = async ({
   query.OR = [
     { classId: null },
     {
-      class: roleConditions[role as keyof typeof roleConditions] || {},
+      class: role ? roleConditions[role as keyof typeof roleConditions] || {} : {},
     },
   ];
 
-  const [data, count] = await prisma.$transaction([
-    prisma.event.findMany({
+  const [data, count] = await db.$transaction([
+    db.event.findMany({
       where: query,
       include: {
         class: true,
@@ -137,7 +136,7 @@ const EventListPage = async ({
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
-    prisma.event.count({ where: query }),
+    db.event.count({ where: query }),
   ]);
 
   return (
@@ -154,7 +153,7 @@ const EventListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === "admin" && <FormContainer table="event" type="create" />}
+            {isAdmin && <FormContainer table="event" type="create" />}
           </div>
         </div>
       </div>

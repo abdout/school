@@ -2,11 +2,11 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/db"; // Changed import to use db
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma, Subject, Teacher } from "@prisma/client";
+import { UserRole, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
-import { auth } from "@clerk/nextjs/server";
+import { currentRole } from "@/lib/auth"; // Import currentRole
 
 type SubjectList = Subject & { teachers: Teacher[] };
 
@@ -15,8 +15,8 @@ const SubjectListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = await currentRole();
+  const isAdmin = role === UserRole.ADMIN;
 
   const columns = [
     {
@@ -45,7 +45,7 @@ const SubjectListPage = async ({
       </td>
       <td>
         <div className="flex items-center gap-2">
-          {role === "admin" && (
+          {isAdmin && (
             <>
               <FormContainer table="subject" type="update" data={item} />
               <FormContainer table="subject" type="delete" id={item.id} />
@@ -57,11 +57,9 @@ const SubjectListPage = async ({
   );
 
   const { page, ...queryParams } = searchParams;
-
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.SubjectWhereInput = {};
 
   if (queryParams) {
@@ -78,8 +76,8 @@ const SubjectListPage = async ({
     }
   }
 
-  const [data, count] = await prisma.$transaction([
-    prisma.subject.findMany({
+  const [data, count] = await db.$transaction([
+    db.subject.findMany({
       where: query,
       include: {
         teachers: true,
@@ -87,7 +85,7 @@ const SubjectListPage = async ({
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
-    prisma.subject.count({ where: query }),
+    db.subject.count({ where: query }),
   ]);
 
   return (
@@ -104,9 +102,7 @@ const SubjectListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === "admin" && (
-              <FormContainer table="subject" type="create" />
-            )}
+            {isAdmin && <FormContainer table="subject" type="create" />}
           </div>
         </div>
       </div>

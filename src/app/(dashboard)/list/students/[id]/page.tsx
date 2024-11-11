@@ -3,27 +3,23 @@ import BigCalendarContainer from "@/components/BigCalendarContainer";
 import FormContainer from "@/components/FormContainer";
 import Performance from "@/components/Performance";
 import StudentAttendanceCard from "@/components/StudentAttendanceCard";
-import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
-import { Class, Student } from "@prisma/client";
+import { db } from "@/lib/db"; // Changed import to use db
+import { UserRole } from "@prisma/client"; // Import UserRole directly from Prisma
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { currentRole } from "@/lib/auth"; // Import currentRole
 
 const SingleStudentPage = async ({
   params: { id },
 }: {
   params: { id: string };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = await currentRole();
+  const isAdmin = role === UserRole.ADMIN;
 
-  const student:
-    | (Student & {
-        class: Class & { _count: { lessons: number } };
-      })
-    | null = await prisma.student.findUnique({
+  const student = await db.student.findUnique({
     where: { id },
     include: {
       class: { include: { _count: { select: { lessons: true } } } },
@@ -56,7 +52,7 @@ const SingleStudentPage = async ({
                 <h1 className="text-xl font-semibold">
                   {student.name + " " + student.surname}
                 </h1>
-                {role === "admin" && (
+                {isAdmin && (
                   <FormContainer table="student" type="update" data={student} />
                 )}
               </div>

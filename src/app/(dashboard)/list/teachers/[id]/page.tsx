@@ -1,11 +1,10 @@
 import Announcements from "@/components/Announcements";
 import BigCalendarContainer from "@/components/BigCalendarContainer";
-import BigCalendar from "@/components/BigCalender";
 import FormContainer from "@/components/FormContainer";
 import Performance from "@/components/Performance";
-import prisma from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
-import { Teacher } from "@prisma/client";
+import { db } from "@/lib/db"; // Changed import to use db
+import { UserRole, Teacher } from "@prisma/client";
+import { currentRole } from "@/lib/auth"; // Import currentRole
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,14 +14,14 @@ const SingleTeacherPage = async ({
 }: {
   params: { id: string };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = await currentRole();
+  const isAdmin = role === UserRole.ADMIN;
 
   const teacher:
     | (Teacher & {
         _count: { subjects: number; lessons: number; classes: number };
       })
-    | null = await prisma.teacher.findUnique({
+    | null = await db.teacher.findUnique({
     where: { id },
     include: {
       _count: {
@@ -38,6 +37,7 @@ const SingleTeacherPage = async ({
   if (!teacher) {
     return notFound();
   }
+
   return (
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
       {/* LEFT */}
@@ -60,7 +60,7 @@ const SingleTeacherPage = async ({
                 <h1 className="text-xl font-semibold">
                   {teacher.name + " " + teacher.surname}
                 </h1>
-                {role === "admin" && (
+                {isAdmin && (
                   <FormContainer table="teacher" type="update" data={teacher} />
                 )}
               </div>

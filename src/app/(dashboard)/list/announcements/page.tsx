@@ -2,24 +2,26 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import prisma from "@/lib/prisma";
+import { currentRole, currentUser } from "@/lib/auth";
+import { UserRole } from "@prisma/client";
+import { db } from "@/lib/db"; // Changed import to use db
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Announcement, Class, Prisma } from "@prisma/client";
 import Image from "next/image";
-import { auth } from "@clerk/nextjs/server";
-
 
 type AnnouncementList = Announcement & { class: Class };
+
 const AnnouncementListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  
-  const { userId, sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
-  const currentUserId = userId;
-  
+  const user = await currentUser();
+  const role = await currentRole();
+  const currentUserId = user?.id;
+
+  const isAdmin = role === UserRole.ADMIN;
+
   const columns = [
     {
       header: "Title",
@@ -34,7 +36,7 @@ const AnnouncementListPage = async ({
       accessor: "date",
       className: "hidden md:table-cell",
     },
-    ...(role === "admin"
+    ...(isAdmin
       ? [
           {
             header: "Actions",
@@ -43,7 +45,7 @@ const AnnouncementListPage = async ({
         ]
       : []),
   ];
-  
+
   const renderRow = (item: AnnouncementList) => (
     <tr
       key={item.id}
@@ -56,7 +58,7 @@ const AnnouncementListPage = async ({
       </td>
       <td>
         <div className="flex items-center gap-2">
-          {role === "admin" && (
+          {isAdmin && (
             <>
               <FormContainer table="announcement" type="update" data={item} />
               <FormContainer table="announcement" type="delete" id={item.id} />
@@ -66,12 +68,11 @@ const AnnouncementListPage = async ({
       </td>
     </tr>
   );
-  const { page, ...queryParams } = searchParams;
 
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.AnnouncementWhereInput = {};
 
   if (queryParams) {
@@ -89,7 +90,6 @@ const AnnouncementListPage = async ({
   }
 
   // ROLE CONDITIONS
-
   const roleConditions = {
     teacher: { lessons: { some: { teacherId: currentUserId! } } },
     student: { students: { some: { id: currentUserId! } } },
@@ -99,12 +99,12 @@ const AnnouncementListPage = async ({
   query.OR = [
     { classId: null },
     {
-      class: roleConditions[role as keyof typeof roleConditions] || {},
+      class: role ? roleConditions[role as keyof typeof roleConditions] || {} : {},
     },
   ];
 
-  const [data, count] = await prisma.$transaction([
-    prisma.announcement.findMany({
+  const [data, count] = await db.$transaction([
+    db.announcement.findMany({
       where: query,
       include: {
         class: true,
@@ -112,7 +112,7 @@ const AnnouncementListPage = async ({
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
-    prisma.announcement.count({ where: query }),
+    db.announcement.count({ where: query }),
   ]);
 
   return (
@@ -131,9 +131,7 @@ const AnnouncementListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === "admin" && (
-              <FormContainer table="announcement" type="create" />
-            )}
+            {isAdmin && <FormContainer table="announcement" type="create" />}
           </div>
         </div>
       </div>

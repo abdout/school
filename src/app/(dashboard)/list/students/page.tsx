@@ -3,13 +3,12 @@ import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/db"; // Changed import to use db
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Class, Prisma, Student } from "@prisma/client";
+import { Class, Prisma, Student, UserRole } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-
-import { auth } from "@clerk/nextjs/server";
+import { currentRole } from "@/lib/auth"; // Import currentRole
 
 type StudentList = Student & { class: Class };
 
@@ -18,8 +17,8 @@ const StudentListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = await currentRole();
+  const isAdmin = role === UserRole.ADMIN;
 
   const columns = [
     {
@@ -46,7 +45,7 @@ const StudentListPage = async ({
       accessor: "address",
       className: "hidden lg:table-cell",
     },
-    ...(role === "admin"
+    ...(isAdmin
       ? [
           {
             header: "Actions",
@@ -85,10 +84,7 @@ const StudentListPage = async ({
               <Image src="/view.png" alt="" width={16} height={16} />
             </button>
           </Link>
-          {role === "admin" && (
-            // <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple">
-            //   <Image src="/delete.png" alt="" width={16} height={16} />
-            // </button>
+          {isAdmin && (
             <FormContainer table="student" type="delete" id={item.id} />
           )}
         </div>
@@ -97,11 +93,9 @@ const StudentListPage = async ({
   );
 
   const { page, ...queryParams } = searchParams;
-
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.StudentWhereInput = {};
 
   if (queryParams) {
@@ -127,8 +121,8 @@ const StudentListPage = async ({
     }
   }
 
-  const [data, count] = await prisma.$transaction([
-    prisma.student.findMany({
+  const [data, count] = await db.$transaction([
+    db.student.findMany({
       where: query,
       include: {
         class: true,
@@ -136,7 +130,7 @@ const StudentListPage = async ({
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
-    prisma.student.count({ where: query }),
+    db.student.count({ where: query }),
   ]);
 
   return (
@@ -153,12 +147,7 @@ const StudentListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === "admin" && (
-              // <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              //   <Image src="/plus.png" alt="" width={14} height={14} />
-              // </button>
-              <FormContainer table="student" type="create" />
-            )}
+            {isAdmin && <FormContainer table="student" type="create" />}
           </div>
         </div>
       </div>

@@ -2,12 +2,12 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import prisma from "@/lib/prisma";
-import { Class, Prisma, Subject, Teacher } from "@prisma/client";
+import { db } from "@/lib/db"; // Changed import to use db
+import { ITEM_PER_PAGE } from "@/lib/settings";
+import { Class, Prisma, Subject, Teacher, UserRole } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import { ITEM_PER_PAGE } from "@/lib/settings";
-import { auth } from "@clerk/nextjs/server";
+import { currentRole } from "@/lib/auth"; // Import currentRole
 
 type TeacherList = Teacher & { subjects: Subject[] } & { classes: Class[] };
 
@@ -16,8 +16,9 @@ const TeacherListPage = async ({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const role = await currentRole();
+  const isAdmin = role === UserRole.ADMIN;
+
   const columns = [
     {
       header: "Info",
@@ -48,7 +49,7 @@ const TeacherListPage = async ({
       accessor: "address",
       className: "hidden lg:table-cell",
     },
-    ...(role === "admin"
+    ...(isAdmin
       ? [
           {
             header: "Actions",
@@ -92,22 +93,18 @@ const TeacherListPage = async ({
               <Image src="/view.png" alt="" width={16} height={16} />
             </button>
           </Link>
-          {role === "admin" && (
-            // <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaPurple">
-            //   <Image src="/delete.png" alt="" width={16} height={16} />
-            // </button>
+          {isAdmin && (
             <FormContainer table="teacher" type="delete" id={item.id} />
           )}
         </div>
       </td>
     </tr>
   );
-  const { page, ...queryParams } = searchParams;
 
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
   // URL PARAMS CONDITION
-
   const query: Prisma.TeacherWhereInput = {};
 
   if (queryParams) {
@@ -131,8 +128,8 @@ const TeacherListPage = async ({
     }
   }
 
-  const [data, count] = await prisma.$transaction([
-    prisma.teacher.findMany({
+  const [data, count] = await db.$transaction([
+    db.teacher.findMany({
       where: query,
       include: {
         subjects: true,
@@ -141,7 +138,7 @@ const TeacherListPage = async ({
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),
-    prisma.teacher.count({ where: query }),
+    db.teacher.count({ where: query }),
   ]);
 
   return (
@@ -158,9 +155,7 @@ const TeacherListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {role === "admin" && (
-              <FormContainer table="teacher" type="create" />
-            )}
+            {isAdmin && <FormContainer table="teacher" type="create" />}
           </div>
         </div>
       </div>
