@@ -1,9 +1,9 @@
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 const EventList = async ({ dateParam }: { dateParam: string | undefined }) => {
   const date = dateParam ? new Date(dateParam) : new Date();
 
-  const data = await prisma.event.findMany({
+  const data = await db.event.findMany({
     where: {
       startTime: {
         gte: new Date(date.setHours(0, 0, 0, 0)),

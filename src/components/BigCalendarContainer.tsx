@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/db";
 import BigCalendar from "./BigCalender";
 import { adjustScheduleToCurrentWeek } from "@/lib/utils";
 
@@ -9,11 +9,11 @@ const BigCalendarContainer = async ({
   type: "teacherId" | "classId";
   id: string | number;
 }) => {
-  const dataRes = await prisma.lesson.findMany({
+  const dataRes = await db.lesson.findMany({
     where: {
       ...(type === "teacherId"
         ? { teacherId: id as string }
-        : { classId: id as number }),
+        : { classId: id.toString() }), // Convert id to string for classId
     },
   });
 

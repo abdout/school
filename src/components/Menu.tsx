@@ -1,6 +1,6 @@
-import { currentUser } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
+import { currentUser } from "@/lib/auth"; 
 
 const menuItems = [
   {
@@ -119,15 +119,16 @@ const menuItems = [
 
 const Menu = async () => {
   const user = await currentUser();
-  const role = user?.publicMetadata.role as string;
+  const role = user?.role as string;
+
   return (
     <div className="mt-4 text-sm">
-      {menuItems.map((i) => (
-        <div className="flex flex-col gap-2" key={i.title}>
+      {menuItems.map((section) => (
+        <div className="flex flex-col gap-2" key={section.title}>
           <span className="hidden lg:block text-gray-400 font-light my-4">
-            {i.title}
+            {section.title}
           </span>
-          {i.items.map((item) => {
+          {section.items.map((item) => {
             if (item.visible.includes(role)) {
               return (
                 <Link

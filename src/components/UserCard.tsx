@@ -1,4 +1,4 @@
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/db";
 import Image from "next/image";
 
 const UserCard = async ({
@@ -7,10 +7,10 @@ const UserCard = async ({
   type: "admin" | "teacher" | "student" | "parent";
 }) => {
   const modelMap: Record<typeof type, any> = {
-    admin: prisma.admin,
-    teacher: prisma.teacher,
-    student: prisma.student,
-    parent: prisma.parent,
+    admin: db.admin,
+    teacher: db.teacher,
+    student: db.student,
+    parent: db.parent,
   };
 
   const data = await modelMap[type].count();

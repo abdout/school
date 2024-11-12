@@ -1,21 +1,9 @@
 "use server";
 
-import * as z from "zod";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import {
-  ClassSchema,
-  ExamSchema,
-  StudentSchema,
-  SubjectSchema,
-  TeacherSchema,
-} from "./formValidationSchemas";
+import { ClassSchema, ExamSchema, StudentSchema, SubjectSchema, TeacherSchema } from "./formValidationSchemas";
 import { db } from "@/lib/db";
-import { RegisterSchema } from "@/components/auth/schemas";
-import { sendVerificationEmail } from "@/lib/mail";
-import { generateVerificationToken } from "@/lib/tokens";
-import { getUserByEmail } from "@/components/auth/data/user";
-import { useSession } from "next-auth/react";
 
 type CurrentState = { success: boolean; error: boolean };
 
@@ -26,17 +14,14 @@ export const updateSubject = async (
   data: SubjectSchema
 ) => {
   try {
-    // Convert data.id to a string if it's not already, to ensure it matches Prisma's expected type
     const subjectId = data.id?.toString();
 
     await db.subject.update({
-      where: {
-        id: subjectId,
-      },
+      where: { id: subjectId },
       data: {
         name: data.name,
         teachers: {
-          set: data.teachers.map((teacherId) => ({ id: teacherId.toString() })), // Ensure teacherId is a string
+          set: data.teachers.map((teacherId) => ({ id: teacherId.toString() })),
         },
       },
     });
@@ -49,18 +34,13 @@ export const updateSubject = async (
   }
 };
 
-
 export const deleteSubject = async (
   currentState: CurrentState,
   data: FormData
 ) => {
   const id = data.get("id") as string;
   try {
-    await db.subject.delete({
-      where: {
-        id, // Use `id` directly as a string
-      },
-    });
+    await db.subject.delete({ where: { id } });
 
     revalidatePath("/list/subjects");
     return { success: true, error: false };
@@ -69,7 +49,6 @@ export const deleteSubject = async (
     return { success: false, error: true };
   }
 };
-
 
 // CLASS CRUD
 
@@ -82,8 +61,8 @@ export const createClass = async (
       data: {
         name: data.name,
         capacity: data.capacity,
-        gradeId: data.gradeId.toString(), // Ensure gradeId is a string
-        supervisorId: data.supervisorId, // Ensure this is optional or as required
+        gradeId: data.gradeId.toString(),
+        supervisorId: data.supervisorId,
       },
     });
 
@@ -94,7 +73,6 @@ export const createClass = async (
     return { success: false, error: true };
   }
 };
-
 
 export const updateClass = async (
   currentState: CurrentState,
@@ -102,14 +80,12 @@ export const updateClass = async (
 ) => {
   try {
     await db.class.update({
-      where: {
-        id: data.id?.toString(), // Convert id to string if it's not undefined
-      },
+      where: { id: data.id?.toString() },
       data: {
         name: data.name,
         capacity: data.capacity,
-        gradeId: data.gradeId.toString(), // Convert gradeId to string if required
-        supervisorId: data.supervisorId, // Ensure this is a string or undefined as needed
+        gradeId: data.gradeId.toString(),
+        supervisorId: data.supervisorId,
       },
     });
 
@@ -120,19 +96,14 @@ export const updateClass = async (
     return { success: false, error: true };
   }
 };
-
 
 export const deleteClass = async (
   currentState: CurrentState,
   data: FormData
 ) => {
-  const id = data.get("id") as string; // Keep `id` as a string
+  const id = data.get("id") as string;
   try {
-    await db.class.delete({
-      where: {
-        id: id, // Use `id` as a string, as expected by Prisma
-      },
-    });
+    await db.class.delete({ where: { id } });
 
     revalidatePath("/list/class");
     return { success: true, error: false };
@@ -141,7 +112,6 @@ export const deleteClass = async (
     return { success: false, error: true };
   }
 };
-
 
 // TEACHER CRUD
 
@@ -150,14 +120,32 @@ export const createTeacher = async (
   data: TeacherSchema
 ) => {
   try {
+    if (!data.password) throw new Error("Password is required.");
     const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    const user = await db.user.create({
+      data: {
+        email: data.email,
+        password: hashedPassword,
+        role: "TEACHER",
+        name: `${data.name} ${data.surname}`,
+      },
+    });
+
     await db.teacher.create({
       data: {
-        ...data,
-        password: hashedPassword,
+        userId: user.id,
+        name: data.name,
+        surname: data.surname,
+        phone: data.phone,
+        address: data.address,
+        img: data.img,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
         subjects: {
-          connect: data.subjects?.map((subjectId: string) => ({
-            id: parseInt(subjectId),
+          connect: data.subjects?.map((subjectId) => ({
+            id: subjectId.toString(),
           })),
         },
       },
@@ -166,7 +154,7 @@ export const createTeacher = async (
     revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return { success: false, error: true };
   }
 };
@@ -180,28 +168,53 @@ export const updateTeacher = async (
   }
   try {
     const updateData: Partial<TeacherSchema> = { ...data };
+
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10);
     }
 
+    const teacherRecord = await db.teacher.findUnique({
+      where: { id: data.id },
+      select: { userId: true },
+    });
+
+    if (!teacherRecord) throw new Error("Teacher not found");
+
+    // First update the teacher basic info
     await db.teacher.update({
-      where: {
-        id: data.id,
-      },
+      where: { id: data.id },
       data: {
-        ...updateData,
-        subjects: {
-          set: data.subjects?.map((subjectId: string) => ({
-            id: parseInt(subjectId),
-          })),
-        },
+        name: data.name,
+        surname: data.surname,
+        phone: data.phone,
+        address: data.address,
+        img: data.img,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
       },
     });
+
+    // Then handle the subjects relationship
+    if (data.subjects) {
+      // Delete existing relationships
+      await db.subjectTeacher.deleteMany({
+        where: { teacherId: data.id }
+      });
+
+      // Create new relationships
+      await db.subjectTeacher.createMany({
+        data: data.subjects.map(subjectId => ({
+          subjectId: subjectId.toString(),
+          teacherId: data.id!
+        }))
+      });
+    }
 
     revalidatePath("/list/teachers");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return { success: false, error: true };
   }
 };
@@ -212,11 +225,7 @@ export const deleteTeacher = async (
 ) => {
   const id = data.get("id") as string;
   try {
-    await db.teacher.delete({
-      where: {
-        id: id,
-      },
-    });
+    await db.teacher.delete({ where: { id } });
 
     revalidatePath("/list/teachers");
     return { success: true, error: false };
@@ -230,60 +239,101 @@ export const deleteTeacher = async (
 
 export const createStudent = async (
   currentState: CurrentState,
-  data: StudentSchema
+  data: Omit<StudentSchema, "userId" | "password"> & { password?: string }
 ) => {
   try {
     const classItem = await db.class.findUnique({
-      where: { id: data.classId },
-      include: { _count: { select: { students: true } } },
+      where: { id: String(data.classId) },
     });
 
-    if (classItem && classItem.capacity === classItem._count.students) {
-      return { success: false, error: true };
+    if (!classItem) throw new Error("Class not found");
+
+    const studentCount = await db.student.count({
+      where: { classId: String(data.classId) },
+    });
+
+    if (studentCount >= classItem.capacity) {
+      return { success: false, error: true, message: "Class capacity reached" };
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = data.password
+      ? await bcrypt.hash(data.password, 10)
+      : null;
+
+    const user = await db.user.create({
+      data: {
+        name: `${data.name} ${data.surname}`,
+        email: data.email,
+        password: hashedPassword,
+        role: "STUDENT",
+      },
+    });
 
     await db.student.create({
       data: {
-        ...data,
-        password: hashedPassword,
+        userId: user.id,
+        name: data.name,
+        surname: data.surname,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        classId: String(data.classId),
+        gradeId: String(data.gradeId),
+        parentId: String(data.parentId),
       },
     });
 
     revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.error(err);
+    return { success: false, error: true, message: (err as Error).message };
   }
 };
 
 export const updateStudent = async (
   currentState: CurrentState,
-  data: StudentSchema
+  data: Omit<StudentSchema, "password"> & { password?: string; userId: string }
 ) => {
   if (!data.id) {
-    return { success: false, error: true };
+    return { success: false, error: true, message: "Student ID is required." };
   }
   try {
     const updateData: Partial<StudentSchema> = { ...data };
+
     if (data.password) {
-      updateData.password = await bcrypt.hash(data.password, 10);
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      await db.user.update({
+        where: { id: String(data.userId) },
+        data: { password: hashedPassword },
+      });
     }
 
     await db.student.update({
-      where: {
-        id: data.id,
+      where: { id: String(data.id) },
+      data: {
+        name: data.name,
+        surname: data.surname,
+        phone: data.phone || null,
+        address: data.address,
+        img: data.img || null,
+        bloodType: data.bloodType,
+        sex: data.sex,
+        birthday: data.birthday,
+        classId: String(data.classId),
+        gradeId: String(data.gradeId),
+        parentId: String(data.parentId),
       },
-      data: updateData,
     });
 
     revalidatePath("/list/students");
     return { success: true, error: false };
   } catch (err) {
-    console.log(err);
-    return { success: false, error: true };
+    console.error((err as Error).message);
+    return { success: false, error: true, message: (err as Error).message };
   }
 };
 
@@ -293,11 +343,7 @@ export const deleteStudent = async (
 ) => {
   const id = data.get("id") as string;
   try {
-    await db.student.delete({
-      where: {
-        id: id,
-      },
-    });
+    await db.student.delete({ where: { id } });
 
     revalidatePath("/list/students");
     return { success: true, error: false };
@@ -319,7 +365,7 @@ export const createExam = async (
         title: data.title,
         startTime: data.startTime,
         endTime: data.endTime,
-        lessonId: data.lessonId,
+        lessonId: String(data.lessonId),
       },
     });
 
@@ -337,14 +383,12 @@ export const updateExam = async (
 ) => {
   try {
     await db.exam.update({
-      where: {
-        id: data.id,
-      },
+      where: { id: String(data.id) },
       data: {
         title: data.title,
         startTime: data.startTime,
         endTime: data.endTime,
-        lessonId: data.lessonId,
+        lessonId: String(data.lessonId),
       },
     });
 
@@ -355,18 +399,13 @@ export const updateExam = async (
     return { success: false, error: true };
   }
 };
-
 export const deleteExam = async (
   currentState: CurrentState,
   data: FormData
 ) => {
   const id = data.get("id") as string;
   try {
-    await db.exam.delete({
-      where: {
-        id: parseInt(id),
-      },
-    });
+    await db.exam.delete({ where: { id } });
 
     revalidatePath("/list/exams");
     return { success: true, error: false };
@@ -374,49 +413,4 @@ export const deleteExam = async (
     console.log(err);
     return { success: false, error: true };
   }
-};
-
-// REGISTER FUNCTION
-export const register = async (values: z.infer<typeof RegisterSchema>) => {
-  const validatedFields = RegisterSchema.safeParse(values);
-
-  if (!validatedFields.success) {
-    return { error: "Invalid fields!" };
-  }
-
-  const { email, password, name } = validatedFields.data;
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const existingUser = await getUserByEmail(email);
-
-  if (existingUser) {
-    return { error: "Email already in use!" };
-  }
-
-  await db.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-    },
-  });
-
-  const verificationToken = await generateVerificationToken(email);
-  await sendVerificationEmail(
-    verificationToken.email,
-    verificationToken.token
-  );
-
-  return { success: "Confirmation email sent!" };
-};
-
-// GET USER AND ROLE
-export const useCurrentUser = () => {
-  const session = useSession();
-  return session.data?.user;
-};
-
-export const useCurrentRole = () => {
-  const session = useSession();
-  return session.data?.user?.role;
 };

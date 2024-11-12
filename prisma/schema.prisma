@@ -38,9 +38,10 @@ model User {
   image                 String?
   password              String?
   role                  UserRole  @default(USER)
-  accounts              String[]
+  accounts              Account[]
   isTwoFactorEnabled    Boolean   @default(false)
   twoFactorConfirmation String?
+  admin    Admin?
 
   student  Student?
   teacher  Teacher?
@@ -48,18 +49,19 @@ model User {
 }
 
 model Account {
-  id                 String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?
-  access_token       String?
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?
-  session_state      String?
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  user              User    @relation(fields: [userId], references: [id])
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
   @@unique([provider, providerAccountId])
 }
@@ -97,6 +99,13 @@ model TwoFactorConfirmation {
 }
 
 // School Management Models
+model Admin {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String  @unique @db.ObjectId
+  user     User    @relation(fields: [userId], references: [id])
+  username String  @unique
+}
+
 model Student {
   id          String      @id @default(auto()) @map("_id") @db.ObjectId
   userId      String      @unique @db.ObjectId

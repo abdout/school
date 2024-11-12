@@ -1,7 +1,7 @@
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 const StudentAttendanceCard = async ({ id }: { id: string }) => {
-  const attendance = await prisma.attendance.findMany({
+  const attendance = await db.attendance.findMany({
     where: {
       studentId: id,
       date: {
