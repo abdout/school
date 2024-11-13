@@ -129,7 +129,8 @@ const Menu = async () => {
             {section.title}
           </span>
           {section.items.map((item) => {
-            if (item.visible.includes(role)) {
+            // Comment out the role visibility check
+            // if (item.visible.includes(role)) {
               return (
                 <Link
                   href={item.href}
@@ -140,7 +141,7 @@ const Menu = async () => {
                   <span className="hidden lg:block">{item.label}</span>
                 </Link>
               );
-            }
+            // }
           })}
         </div>
       ))}
