@@ -5,12 +5,12 @@ import TableSearch from "@/components/TableSearch";
 
 import { db } from "@/lib/db"; // Changed import to use db
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Class, Prisma, Student, UserRole } from "@prisma/client";
+import { Class, Prisma, Student, User, UserRole } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { currentRole } from "@/lib/auth"; // Import currentRole
 
-type StudentList = Student & { class: Class };
+type StudentList = Student & { class: Class; user: User };
 
 const StudentListPage = async ({
   searchParams,
@@ -73,7 +73,7 @@ const StudentListPage = async ({
           <p className="text-xs text-gray-500">{item.class.name}</p>
         </div>
       </td>
-      <td className="hidden md:table-cell">{item.username}</td>
+      <td className="hidden md:table-cell">{item.user?.name || item.id}</td>
       <td className="hidden md:table-cell">{item.class.name[0]}</td>
       <td className="hidden md:table-cell">{item.phone}</td>
       <td className="hidden md:table-cell">{item.address}</td>
@@ -126,6 +126,7 @@ const StudentListPage = async ({
       where: query,
       include: {
         class: true,
+        user: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),

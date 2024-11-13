@@ -26,8 +26,9 @@ const AssignmentListPage = async ({
   const role = await currentRole();
   const currentUserId = user?.id;
 
-  const isAdmin = role === UserRole.ADMIN;
-  const isTeacher = role === UserRole.TEACHER;
+  // Bypassing role-based conditions temporarily for testing
+  // const isAdmin = role === UserRole.ADMIN;
+  // const isTeacher = role === UserRole.TEACHER;
 
   const columns = [
     {
@@ -48,14 +49,11 @@ const AssignmentListPage = async ({
       accessor: "dueDate",
       className: "hidden md:table-cell",
     },
-    ...(isAdmin || isTeacher
-      ? [
-        {
-          header: "Actions",
-          accessor: "action",
-        },
-      ]
-      : []),
+    // Uncomment role-based action column in the future if needed
+    {
+      header: "Actions",
+      accessor: "action",
+    },
   ];
 
   const renderRow = (item: AssignmentList) => (
@@ -73,12 +71,9 @@ const AssignmentListPage = async ({
       </td>
       <td>
         <div className="flex items-center gap-2">
-          {(isAdmin || isTeacher) && (
-            <>
-              <FormModal table="assignment" type="update" data={item} />
-              <FormModal table="assignment" type="delete" id={item.id} />
-            </>
-          )}
+          {/* Bypassing role-based display for testing purposes */}
+          <FormModal table="assignment" type="update" data={item} />
+          <FormModal table="assignment" type="delete" id={item.id} />
         </div>
       </td>
     </tr>
@@ -114,13 +109,13 @@ const AssignmentListPage = async ({
     }
   }
 
-
-  // ROLE CONDITIONS
+  // Role conditions are commented out for testing
+  /*
   switch (role) {
     case UserRole.ADMIN:
       break;
     case UserRole.TEACHER:
-      query.lesson!.teacherId = currentUserId!; // Use `!` to assert non-null after initialization
+      query.lesson!.teacherId = currentUserId!;
       break;
     case UserRole.STUDENT:
       query.lesson!.class = {
@@ -143,6 +138,7 @@ const AssignmentListPage = async ({
     default:
       break;
   }
+  */
 
   const [data, count] = await db.$transaction([
     db.assignment.findMany({
@@ -178,9 +174,8 @@ const AssignmentListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {(isAdmin || isTeacher) && (
-              <FormModal table="assignment" type="create" />
-            )}
+            {/* Bypassing role-based display for creating a new assignment */}
+            <FormModal table="assignment" type="create" />
           </div>
         </div>
       </div>

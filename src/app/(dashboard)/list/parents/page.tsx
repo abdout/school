@@ -2,14 +2,14 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { UserRole } from "@prisma/client"; // Import UserRole directly from Prisma
+import { User, UserRole } from "@prisma/client"; // Import UserRole directly from Prisma
 import { db } from "@/lib/db"; // Changed import to use db
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Parent, Prisma, Student } from "@prisma/client";
 import Image from "next/image";
 import { currentRole } from "@/lib/auth"; // Import currentRole
 
-type ParentList = Parent & { students: Student[] };
+type ParentList = Parent & { students: Student[]; user: User };
 
 const ParentListPage = async ({
   searchParams,
@@ -57,7 +57,7 @@ const ParentListPage = async ({
       <td className="flex items-center gap-4 p-4">
         <div className="flex flex-col">
           <h3 className="font-semibold">{item.name}</h3>
-          <p className="text-xs text-gray-500">{item?.email}</p>
+          <p className="text-xs text-gray-500">{item.user?.email}</p>
         </div>
       </td>
       <td className="hidden md:table-cell">
@@ -103,6 +103,7 @@ const ParentListPage = async ({
       where: query,
       include: {
         students: true,
+        user: true,
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),

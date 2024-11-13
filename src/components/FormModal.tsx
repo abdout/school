@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { toast } from "react-toastify";
 import { FormContainerProps } from "./FormContainer";
 
@@ -122,13 +122,13 @@ const FormModal = ({
   const [open, setOpen] = useState(false);
 
   const Form = () => {
-    const [state, formAction] = useFormState(deleteActionMap[table], {
+    const [state, formAction] = useActionState(deleteActionMap[table], {
       success: false,
       error: false,
     });
-
+  
     const router = useRouter();
-
+  
     useEffect(() => {
       if (state.success) {
         toast(`${table} has been deleted!`);
@@ -136,22 +136,26 @@ const FormModal = ({
         router.refresh();
       }
     }, [state, router]);
-
-    return type === "delete" && id ? (
-      <form action={formAction} className="p-4 flex flex-col gap-4">
-        <input type="text | number" name="id" value={id} hidden />
-        <span className="text-center font-medium">
-          All data will be lost. Are you sure you want to delete this {table}?
-        </span>
-        <button className="bg-red-700 text-white py-2 px-4 rounded-md border-none w-max self-center">
-          Delete
-        </button>
-      </form>
-    ) : type === "create" || type === "update" ? (
-      forms[table](setOpen, type, data, relatedData)
-    ) : (
-      "Form not found!"
-    );
+  
+    if (type === "delete" && id) {
+      return (
+        <form action={formAction} className="p-4 flex flex-col gap-4">
+          <input type="text | number" name="id" value={id} hidden />
+          <span className="text-center font-medium">
+            All data will be lost. Are you sure you want to delete this {table}?
+          </span>
+          <button className="bg-red-700 text-white py-2 px-4 rounded-md border-none w-max self-center">
+            Delete
+          </button>
+        </form>
+      );
+    }
+  
+    if ((type === "create" || type === "update") && forms[table]) {
+      return forms[table](setOpen, type, data, relatedData);
+    }
+  
+    return "Form not found!";
   };
 
   return (
