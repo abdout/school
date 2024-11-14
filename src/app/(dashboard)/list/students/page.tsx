@@ -18,7 +18,7 @@ const StudentListPage = async ({
   searchParams: { [key: string]: string | undefined };
 }) => {
   const role = await currentRole();
-  const isAdmin = role === UserRole.ADMIN;
+  // const isAdmin = role === UserRole.ADMIN;
 
   const columns = [
     {
@@ -45,14 +45,14 @@ const StudentListPage = async ({
       accessor: "address",
       className: "hidden lg:table-cell",
     },
-    ...(isAdmin
-      ? [
+    // ...(isAdmin
+    //   ? [
           {
             header: "Actions",
             accessor: "action",
           },
-        ]
-      : []),
+      //   ]
+      // : []),
   ];
 
   const renderRow = (item: StudentList) => (
@@ -84,9 +84,9 @@ const StudentListPage = async ({
               <Image src="/view.png" alt="" width={16} height={16} />
             </button>
           </Link>
-          {isAdmin && (
+          {/* {isAdmin && ( */}
             <FormContainer table="student" type="delete" id={item.id} />
-          )}
+          {/* )} */}
         </div>
       </td>
     </tr>

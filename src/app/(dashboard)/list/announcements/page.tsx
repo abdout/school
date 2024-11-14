@@ -20,7 +20,7 @@ const AnnouncementListPage = async ({
   const role = await currentRole();
   const currentUserId = user?.id;
 
-  const isAdmin = role === UserRole.ADMIN;
+  // const isAdmin = role === UserRole.ADMIN;
 
   const columns = [
     {
@@ -36,14 +36,14 @@ const AnnouncementListPage = async ({
       accessor: "date",
       className: "hidden md:table-cell",
     },
-    ...(isAdmin
-      ? [
+    // ...(isAdmin
+    //   ? [
           {
             header: "Actions",
             accessor: "action",
           },
-        ]
-      : []),
+      //   ]
+      // : []),
   ];
 
   const renderRow = (item: AnnouncementList) => (
@@ -58,12 +58,12 @@ const AnnouncementListPage = async ({
       </td>
       <td>
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {/* {isAdmin && ( */}
             <>
               <FormContainer table="announcement" type="update" data={item} />
               <FormContainer table="announcement" type="delete" id={item.id} />
             </>
-          )}
+          {/* )} */}
         </div>
       </td>
     </tr>
@@ -131,7 +131,9 @@ const AnnouncementListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {isAdmin && <FormContainer table="announcement" type="create" />}
+            {/* {isAdmin &&  */}
+            <FormContainer table="announcement" type="create" />
+            {/* } */}
           </div>
         </div>
       </div>

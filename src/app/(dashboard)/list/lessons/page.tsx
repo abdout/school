@@ -19,7 +19,7 @@ const LessonListPage = async ({
   searchParams: { [key: string]: string | undefined };
 }) => {
   const role = await currentRole();
-  const isAdmin = role === UserRole.ADMIN;
+  // const isAdmin = role === UserRole.ADMIN;
 
   const columns = [
     {
@@ -35,14 +35,14 @@ const LessonListPage = async ({
       accessor: "teacher",
       className: "hidden md:table-cell",
     },
-    ...(isAdmin
-      ? [
+    // ...(isAdmin
+    //   ? [
           {
             header: "Actions",
             accessor: "action",
           },
-        ]
-      : []),
+      //   ]
+      // : []),
   ];
 
   const renderRow = (item: LessonList) => (
@@ -57,12 +57,12 @@ const LessonListPage = async ({
       </td>
       <td>
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {/* {isAdmin && ( */}
             <>
               <FormContainer table="lesson" type="update" data={item} />
               <FormContainer table="lesson" type="delete" id={item.id} />
             </>
-          )}
+          {/* )} */}
         </div>
       </td>
     </tr>
@@ -125,7 +125,9 @@ const LessonListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {isAdmin && <FormContainer table="lesson" type="create" />}
+            {/* {isAdmin &&  */}
+            <FormContainer table="lesson" type="create" />
+            {/* } */}
           </div>
         </div>
       </div>

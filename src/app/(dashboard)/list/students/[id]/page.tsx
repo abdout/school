@@ -17,12 +17,21 @@ const SingleStudentPage = async ({
   params: { id: string };
 }) => {
   const role = await currentRole();
-  const isAdmin = role === UserRole.ADMIN;
+  // const isAdmin = role === UserRole.ADMIN;
 
   const student = await db.student.findUnique({
     where: { id },
     include: {
-      class: { include: { _count: { select: { lessons: true } } } },
+      class: {
+        include: {
+          _count: { select: { lessons: true } }
+        }
+      },
+      user: {
+        select: {
+          email: true
+        }
+      }
     },
   });
 
@@ -52,9 +61,9 @@ const SingleStudentPage = async ({
                 <h1 className="text-xl font-semibold">
                   {student.name + " " + student.surname}
                 </h1>
-                {isAdmin && (
+                {/* {isAdmin && ( */}
                   <FormContainer table="student" type="update" data={student} />
-                )}
+                {/* )} */}
               </div>
               <p className="text-sm text-gray-500">
                 Lorem ipsum, dolor sit amet consectetur adipisicing elit.
@@ -72,7 +81,7 @@ const SingleStudentPage = async ({
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/mail.png" alt="" width={14} height={14} />
-                  <span>{student.email || "-"}</span>
+                  <span>{student.user.email || "-"}</span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/phone.png" alt="" width={14} height={14} />

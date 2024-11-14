@@ -17,7 +17,7 @@ const ParentListPage = async ({
   searchParams: { [key: string]: string | undefined };
 }) => {
   const role = await currentRole();
-  const isAdmin = role === UserRole.ADMIN;
+  // const isAdmin = role === UserRole.ADMIN;
 
   const columns = [
     {
@@ -39,14 +39,14 @@ const ParentListPage = async ({
       accessor: "address",
       className: "hidden lg:table-cell",
     },
-    ...(isAdmin
-      ? [
+    // ...(isAdmin
+    //   ? [
           {
             header: "Actions",
             accessor: "action",
           },
-        ]
-      : []),
+      //   ]
+      // : []),
   ];
 
   const renderRow = (item: ParentList) => (
@@ -67,12 +67,12 @@ const ParentListPage = async ({
       <td className="hidden md:table-cell">{item.address}</td>
       <td>
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {/* {isAdmin && ( */}
             <>
               <FormContainer table="parent" type="update" data={item} />
               <FormContainer table="parent" type="delete" id={item.id} />
             </>
-          )}
+          {/* )} */}
         </div>
       </td>
     </tr>
@@ -125,7 +125,9 @@ const ParentListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {isAdmin && <FormContainer table="parent" type="create" />}
+            {/* {isAdmin &&  */}
+            <FormContainer table="parent" type="create" />
+            {/* // } */}
           </div>
         </div>
       </div>

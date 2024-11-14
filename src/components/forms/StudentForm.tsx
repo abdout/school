@@ -4,14 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import Image from "next/image";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useState, useTransition } from "react";
 import {
   studentSchema,
   StudentSchema,
   teacherSchema,
   TeacherSchema,
 } from "@/lib/formValidationSchemas";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import {
   createStudent,
   createTeacher,
@@ -36,36 +36,58 @@ const StudentForm = ({
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<StudentSchema>({
     resolver: zodResolver(studentSchema),
   });
 
   const [img, setImg] = useState<any>();
-
-  const [state, formAction] = useFormState(
-    type === "create" ? createStudent : updateStudent,
-    {
-      success: false,
-      error: false,
-    }
-  );
-
-  const onSubmit = handleSubmit((data) => {
-    console.log("hello");
-    console.log(data);
-    formAction({ ...data, img: img?.secure_url });
-  });
-
+  const [userId, setUserId] = useState<string>("");
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  const username = watch("username");
+  const email = watch("email");
+
   useEffect(() => {
-    if (state.success) {
-      toast(`Student has been ${type === "create" ? "created" : "updated"}!`);
-      setOpen(false);
-      router.refresh();
+    if (type === "create" && username && email) {
+      setUserId(`${username}_${email}`);
+    } else if (type === "update" && data?.userId) {
+      setUserId(data.userId);
     }
-  }, [state, router, type, setOpen]);
+  }, [username, email, type, data]);
+
+  const onSubmit = handleSubmit(async (formData) => {
+    if (!userId) {
+      toast.error("User ID is required");
+      return;
+    }
+
+    const submitData = {
+      ...formData,
+      img: img?.secure_url,
+      userId: userId,
+    };
+
+    if (type === "update" && data?.id) {
+      submitData.id = data.id;
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await (type === "create" ? createStudent : updateStudent)(submitData);
+
+        if (result) {
+          toast(`Student has been ${type === "create" ? "created" : "updated"}!`);
+          setOpen(false);
+          router.refresh();
+        }
+      } catch (error) {
+        toast.error("Something went wrong!");
+      }
+    });
+  });
 
   const { grades, classes } = relatedData;
 
@@ -162,7 +184,7 @@ const StudentForm = ({
         <InputField
           label="Birthday"
           name="birthday"
-          defaultValue={data?.birthday.toISOString().split("T")[0]}
+          defaultValue={data?.birthday?.toISOString().split("T")[0]}
           register={register}
           error={errors.birthday}
           type="date"
@@ -251,8 +273,12 @@ const StudentForm = ({
       {state.error && (
         <span className="text-red-500">Something went wrong!</span>
       )}
-      <button type="submit" className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+       <button 
+        type="submit" 
+        className="bg-blue-400 text-white p-2 rounded-md"
+        disabled={isPending}
+      >
+        {isPending ? "Processing..." : (type === "create" ? "Create" : "Update")}
       </button>
     </form>
   );

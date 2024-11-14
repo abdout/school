@@ -2,14 +2,18 @@ import FormContainer from "@/components/FormContainer";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { db } from "@/lib/db"; // Changed import to use db
+import { db } from "@/lib/db";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Class, Prisma, Subject, Teacher, UserRole } from "@prisma/client";
+import { Class, Prisma, Subject, Teacher, User, UserRole } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import { currentRole } from "@/lib/auth"; // Import currentRole
+import { currentRole } from "@/lib/auth";
 
-type TeacherList = Teacher & { subjects: Subject[] } & { classes: Class[] };
+type TeacherList = Teacher & {
+  subjects: Subject[];
+  classes: Class[];
+  user: User;
+};
 
 const TeacherListPage = async ({
   searchParams,
@@ -74,10 +78,10 @@ const TeacherListPage = async ({
         />
         <div className="flex flex-col">
           <h3 className="font-semibold">{item.name}</h3>
-          <p className="text-xs text-gray-500">{item?.email}</p>
+          <p className="text-xs text-gray-500">{item.user?.email}</p>
         </div>
       </td>
-      <td className="hidden md:table-cell">{item.username}</td>
+      <td className="hidden md:table-cell">{item.surname}</td>
       <td className="hidden md:table-cell">
         {item.subjects.map((subject) => subject.name).join(",")}
       </td>
@@ -114,7 +118,7 @@ const TeacherListPage = async ({
           case "classId":
             query.lessons = {
               some: {
-                classId: parseInt(value),
+                classId: value, // Remove parseInt here
               },
             };
             break;
@@ -134,6 +138,7 @@ const TeacherListPage = async ({
       include: {
         subjects: true,
         classes: true,
+        user: true, // Include the user relation to get email
       },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),

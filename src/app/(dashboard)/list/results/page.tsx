@@ -29,8 +29,8 @@ const ResultListPage = async ({
   const role = await currentRole();
   const currentUserId = user?.id;
 
-  const isAdmin = role === UserRole.ADMIN;
-  const isTeacher = role === UserRole.TEACHER;
+  // const isAdmin = role === UserRole.ADMIN;
+  // const isTeacher = role === UserRole.TEACHER;
 
   const columns = [
     {
@@ -61,14 +61,14 @@ const ResultListPage = async ({
       accessor: "date",
       className: "hidden md:table-cell",
     },
-    ...(isAdmin || isTeacher
-      ? [
+    // ...(isAdmin || isTeacher
+    //   ? [
           {
             header: "Actions",
             accessor: "action",
           },
-        ]
-      : []),
+      //   ]
+      // : []),
   ];
 
   const renderRow = (item: ResultList) => (
@@ -88,12 +88,12 @@ const ResultListPage = async ({
       </td>
       <td>
         <div className="flex items-center gap-2">
-          {(isAdmin || isTeacher) && (
+          {/* {(isAdmin || isTeacher) && ( */}
             <>
               <FormContainer table="result" type="update" data={item} />
               <FormContainer table="result" type="delete" id={item.id} />
             </>
-          )}
+          {/* )} */}
         </div>
       </td>
     </tr>
@@ -215,9 +215,9 @@ const ResultListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="" width={14} height={14} />
             </button>
-            {(isAdmin || isTeacher) && (
+            {/* {(isAdmin || isTeacher) && ( */}
               <FormContainer table="result" type="create" />
-            )}
+            {/* )} */}
           </div>
         </div>
       </div>
